@@ -22,7 +22,7 @@ sys.path.append('tpu/models/official/efficientnet')
 from modeling.architecture import efficientnet_constants
 from modeling.architecture import nn_blocks
 from modeling.architecture import nn_ops
-from official.efficientnet import efficientnet_builder
+from efficientnet import efficientnet_builder
 
 
 class Efficientnet(object):

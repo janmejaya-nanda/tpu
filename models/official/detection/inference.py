@@ -27,17 +27,21 @@ from __future__ import print_function
 import base64
 import csv
 import io
+import json
 
 from absl import flags
 from absl import logging
 
 import numpy as np
+import pandas as pd
 from PIL import Image
+from pycocotools import mask as mask_api
 import tensorflow.compat.v1 as tf
+import statistics
 
-from configs import factory as config_factory
 from dataloader import mode_keys
-from modeling import factory as model_factory
+from projects.fashionpedia.configs import factory as config_factory
+from projects.fashionpedia.modeling import factory as model_factory
 from utils import box_utils
 from utils import input_utils
 from utils import mask_utils
@@ -48,7 +52,7 @@ from hyperparameters import params_dict
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string(
-    'model', 'retinanet', 'Support `retinanet`, `mask_rcnn` and `shapemask`.')
+    'model', 'attribute_mask_rcnn', 'Support `attribute_mask_rcnn`.')
 flags.DEFINE_integer('image_size', 640, 'The image size.')
 flags.DEFINE_string(
     'checkpoint_path', '', 'The path to the checkpoint file.')
@@ -70,11 +74,33 @@ flags.DEFINE_string(
 flags.DEFINE_string(
     'output_html', '/tmp/test.html',
     'The output HTML file that includes images with rendered detections.')
+flags.DEFINE_string(
+    'output_file', '/tmp/res.npy',
+    'The output npy file that includes model output.')
 flags.DEFINE_integer(
     'max_boxes_to_draw', 10, 'The maximum number of boxes to draw.')
 flags.DEFINE_float(
     'min_score_threshold', 0.05,
     'The minimum score thresholds in order to draw boxes.')
+flags.DEFINE_string('output_coco', '/tmp/out-coco.json', "Whether to save output in COCO format.")
+flags.DEFINE_string('attribute_json', None, "Json having attributes and ID mapping")
+flags.DEFINE_string('result_csv_path', None, "path to save result in CSV")
+flags.DEFINE_string('meta_file_path', None, "path to meta file")
+flags.DEFINE_string('weights_path', None, "weights path")
+flags.DEFINE_string('attribute_threshold_json', None, "A JSON containing threshold for each category and attribute "
+                                                      "combination")
+
+
+class NpEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        else:
+            return super(NpEncoder, self).default(obj)
 
 
 def main(unused_argv):
@@ -151,6 +177,7 @@ def main(unused_argv):
       print(' - Loading the checkpoint...')
       saver.restore(sess, FLAGS.checkpoint_path)
 
+      res = []
       image_files = tf.gfile.Glob(FLAGS.image_file_pattern)
       for i, image_file in enumerate(image_files):
         print(' - Processing image %d...' % i)
@@ -172,11 +199,26 @@ def main(unused_argv):
         np_scores = predictions_np['detection_scores'][0, :num_detections]
         np_classes = predictions_np['detection_classes'][0, :num_detections]
         np_classes = np_classes.astype(np.int32)
+        np_attributes = predictions_np['detection_attributes'][
+            0, :num_detections, :]
         np_masks = None
         if 'detection_masks' in predictions_np:
           instance_masks = predictions_np['detection_masks'][0, :num_detections]
           np_masks = mask_utils.paste_instance_masks(
               instance_masks, box_utils.yxyx_to_xywh(np_boxes), height, width)
+          encoded_masks = [
+              mask_api.encode(np.asfortranarray(np_mask))
+              for np_mask in list(np_masks)]
+
+        res.append({
+            'image_file': image_file,
+            'boxes': np_boxes,
+            'classes': np_classes,
+            'scores': np_scores,
+            'attributes': np_attributes,
+            'masks': encoded_masks,
+            'attributes_prob': sess.run(tf.nn.softmax(np_attributes, axis=1))
+        })
 
         image_with_detections = (
             visualization_utils.visualize_boxes_and_labels_on_image_array(
@@ -190,6 +232,39 @@ def main(unused_argv):
                 max_boxes_to_draw=FLAGS.max_boxes_to_draw,
                 min_score_thresh=FLAGS.min_score_threshold))
         image_with_detections_list.append(image_with_detections)
+
+  # preparing result in CSV
+  if FLAGS.result_csv_path:
+    if not (FLAGS.attribute_json and FLAGS.attribute_threshold_json):
+      raise Exception("Missing attribute json mapping")
+    with open(FLAGS.attribute_json) as f:
+      data = json.load(f)
+      attributes_map = dict([(attribute['id'], attribute['name']) for attribute in data['attributes']])
+      attribute_ids = np.array([i[0] for i in sorted(attributes_map.items(), key=lambda x: x[0])])
+    with open(FLAGS.attribute_threshold_json) as f:
+      attr_data = json.load(f)
+      attribute_thresholds = dict([(int(i), round(np.mean(v))) for i, v in attr_data.items()])
+
+    csv_data = []
+    for i in res:
+      for indx, attribute_score in enumerate(i['attributes_prob']):
+        if i['scores'][indx] < 0.8:
+          continue
+        
+        category_id = i['classes'][indx]
+        top_k = attribute_thresholds[category_id]
+        if top_k:
+          ind = np.argpartition(attribute_score, len(attribute_score) - top_k)[-top_k:]
+          predicted_attribute_ids = attribute_ids[ind]
+          attribute_values = [attributes_map[i] for i in predicted_attribute_ids]
+        else:
+          ind, predicted_attribute_ids, attribute_values = [], [], []
+
+        # if attribute_value in required_attributes:
+        csv_data.append([i['image_file'].split('/')[-1], label_map_dict[category_id]['name'], ','.join(attribute_values), i['boxes'][indx], i['masks'][indx]])
+    csv_columns = ['Images file', 'Category value', 'Attribute value', 'Bounding Boxes', "Mask"]
+    df = pd.DataFrame(data=csv_data, columns=csv_columns)
+    df.to_csv(FLAGS.result_csv_path)
 
   print(' - Saving the outputs...')
   formatted_image_with_detections_list = [
@@ -209,6 +284,57 @@ def main(unused_argv):
   html_str += '</html>'
   with tf.gfile.GFile(FLAGS.output_html, 'w') as f:
     f.write(html_str)
+  np.save(FLAGS.output_file, res)
+
+  # saving result in COCO format
+  if FLAGS.output_coco:
+    if not (FLAGS.attribute_json and FLAGS.attribute_threshold_json):
+      raise Exception("Missing attribute json mapping")
+    with open(FLAGS.attribute_json) as f:
+      data = json.load(f)
+      attributes_map = dict([(attribute['id'], attribute['name']) for attribute in data['attributes']])
+      attribute_ids = np.array([i[0] for i in sorted(attributes_map.items(), key=lambda x: x[0])])
+    with open(FLAGS.attribute_threshold_json) as f:
+      attr_data = json.load(f)
+      attribute_thresholds = dict([(int(i), round(np.mean(v))) for i, v in attr_data.items()])
+
+    print("saving result in COCO format to: {}".format(FLAGS.output_coco))
+    print("$"*40)
+    coco_result = []
+    for i in res:
+      for box, category_id, attribute_score, score in zip(i['boxes'], i['classes'], i['attributes_prob'], i['scores']):
+        if score < 0.8:
+          continue
+
+        top_k = attribute_thresholds[category_id]
+        print("len(attribute_score)", len(attribute_score))
+        print("top_k", top_k)
+
+        if top_k:
+          ind = np.argpartition(attribute_score, len(attribute_score) - top_k)[-top_k:]
+          predicted_attribute_ids = attribute_ids[ind]
+          attribute_values = [attributes_map[i] for i in predicted_attribute_ids]
+        else:
+          ind, predicted_attribute_ids, attribute_values = [], [], []
+
+        print("category_id", category_id)
+        print("class Name: ", label_map_dict[category_id]['name'])
+        print("allowed n attributes", top_k)
+        print("attribute_score", attribute_score)
+        print("index", ind)
+        print("Attribute IDs: ", predicted_attribute_ids)
+        print("Attribute Name: ", attribute_values)
+  
+        coco_result.append({
+          "image_id": i['image_file'].split('/')[-1].replace('.jpg', ''), 
+          "category_id": category_id, 
+          "attribute_ids": predicted_attribute_ids,
+          "bbox": i['boxes'], 
+          "score": i['scores'],
+        })
+    with open(FLAGS.output_coco, 'w') as f:
+        json.dump(coco_result, f, cls=NpEncoder)
+  print("$"*40)
 
 
 if __name__ == '__main__':
