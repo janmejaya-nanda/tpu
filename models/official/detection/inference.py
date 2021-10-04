@@ -312,7 +312,7 @@ def main(unused_argv):
 
         if top_k:
           ind = np.argpartition(attribute_score, len(attribute_score) - top_k)[-top_k:]
-          predicted_attribute_ids = attribute_ids[ind]
+          predicted_attribute_ids = list(attribute_ids[ind])
           attribute_values = [attributes_map[i] for i in predicted_attribute_ids]
         else:
           ind, predicted_attribute_ids, attribute_values = [], [], []
@@ -324,16 +324,17 @@ def main(unused_argv):
         print("index", ind)
         print("Attribute IDs: ", predicted_attribute_ids)
         print("Attribute Name: ", attribute_values)
-  
+
+        y1, x1, y2, x2 = box[0], box[1], box[2], box[3]
         coco_result.append({
           "image_id": i['image_file'].split('/')[-1].replace('.jpg', ''), 
           "category_id": category_id, 
           "attribute_ids": predicted_attribute_ids,
-          "bbox": i['boxes'], 
+          "bbox": [x1, y1, x2-x1, y2-y1],
           "score": i['scores'],
         })
-    with open(FLAGS.output_coco, 'w') as f:
-        json.dump(coco_result, f, cls=NpEncoder)
+    with open(FLAGS.output_coco, 'wb') as f:
+        json.dump(coco_result, f)
   print("$"*40)
 
 
