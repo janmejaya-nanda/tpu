@@ -331,10 +331,10 @@ def main(unused_argv):
           "category_id": category_id, 
           "attribute_ids": predicted_attribute_ids,
           "bbox": [x1, y1, x2-x1, y2-y1],
-          "score": i['scores'],
+          "score": float(score),
         })
-    with open(FLAGS.output_coco, 'wb') as f:
-        json.dump(coco_result, f)
+    with open(FLAGS.output_coco, 'w') as f:
+        json.dump(coco_result, f, cls=NpEncoder)
   print("$"*40)
 
 
