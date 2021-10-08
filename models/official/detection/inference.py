@@ -115,7 +115,8 @@ def main(unused_argv):
         if len(row) != 2:
           raise ValueError('Each row of the csv label map file must be in '
                            '`id:name` format.')
-        id_index = int(row[0])
+        # forcing category id to start from 0(zero)
+        id_index = int(row[0]) - 1
         name = row[1]
         label_map_dict[id_index] = {
             'id': id_index,
@@ -198,7 +199,8 @@ def main(unused_argv):
         np_boxes = predictions_np['detection_boxes'][0, :num_detections]
         np_scores = predictions_np['detection_scores'][0, :num_detections]
         np_classes = predictions_np['detection_classes'][0, :num_detections]
-        np_classes = np_classes.astype(np.int32)
+        # forcing category id to start from 0(zero)
+        np_classes = np_classes.astype(np.int32) - 1
         np_attributes = predictions_np['detection_attributes'][
             0, :num_detections, :]
         np_masks = None
