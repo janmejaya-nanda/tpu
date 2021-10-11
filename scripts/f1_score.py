@@ -41,25 +41,17 @@ def main(argv):
     del validation_json
     gc.collect()
 
-    import pdb
-    pdb.set_trace()
 
     y_true, y_pred = [], []
     for image_id, pred_attr in predicted_attributes_by_image_id.items():
         y_pred.append(pred_attr)
         y_true.append(true_attributed_by_image_id[image_id])
 
-    import pdb
-    pdb.set_trace()
-
     mlb = MultiLabelBinarizer()
     mlb.fit([np.arange(min(min(y_true)), max(max(y_true)))])
 
     score_f1 = f1_score(mlb.transform(y_true), mlb.transform(y_pred), average='macro')
     print(score_f1)
-
-    import pdb
-    pdb.set_trace()
 
 
 if __name__ == '__main__':

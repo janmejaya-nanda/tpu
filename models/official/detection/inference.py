@@ -90,6 +90,12 @@ flags.DEFINE_string('weights_path', None, "weights path")
 flags.DEFINE_string('attribute_threshold_json', None, "A JSON containing threshold for each category and attribute "
                                                       "combination")
 
+attribute_thresholds = [0.007834, 0.007371, 0.00714, 0.003209, 0.003672, 0.003209, 0.003209, 0.003209, 0.003209,
+                        0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209,
+                        0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209,
+                        0.003209, 0.003209, 0.003209, 0.003209, 0.003325, 0.003209, 0.003209, 0.003209, 0.003209,
+                        0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209]
+
 
 class NpEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -243,9 +249,6 @@ def main(unused_argv):
       data = json.load(f)
       attributes_map = dict([(attribute['id'], attribute['name']) for attribute in data['attributes']])
       attribute_ids = np.array([i[0] for i in sorted(attributes_map.items(), key=lambda x: x[0])])
-    with open(FLAGS.attribute_threshold_json) as f:
-      attr_data = json.load(f)
-      attribute_thresholds = dict([(int(i), round(np.mean(v))) for i, v in attr_data.items()])
 
     csv_data = []
     for i in res:
@@ -254,13 +257,9 @@ def main(unused_argv):
           continue
         
         category_id = i['classes'][indx]
-        top_k = attribute_thresholds[category_id]
-        if top_k:
-          ind = np.argpartition(attribute_score, len(attribute_score) - top_k)[-top_k:]
-          predicted_attribute_ids = attribute_ids[ind]
-          attribute_values = [attributes_map[i] for i in predicted_attribute_ids]
-        else:
-          ind, predicted_attribute_ids, attribute_values = [], [], []
+        ind = np.where(attribute_score >= attribute_thresholds[category_id])
+        predicted_attribute_ids = attribute_ids[ind]
+        attribute_values = [attributes_map[i] for i in predicted_attribute_ids]
 
         # if attribute_value in required_attributes:
         csv_data.append([i['image_file'].split('/')[-1], label_map_dict[category_id]['name'], ','.join(attribute_values), i['boxes'][indx], i['masks'][indx]])
@@ -296,32 +295,22 @@ def main(unused_argv):
       data = json.load(f)
       attributes_map = dict([(attribute['id'], attribute['name']) for attribute in data['attributes']])
       attribute_ids = np.array([i[0] for i in sorted(attributes_map.items(), key=lambda x: x[0])])
-    with open(FLAGS.attribute_threshold_json) as f:
-      attr_data = json.load(f)
-      attribute_thresholds = dict([(int(i), round(np.mean(v))) for i, v in attr_data.items()])
 
     print("saving result in COCO format to: {}".format(FLAGS.output_coco))
     print("$"*40)
     coco_result = []
     for i in res:
       for box, category_id, attribute_score, score in zip(i['boxes'], i['classes'], i['attributes_prob'], i['scores']):
-        if score < 0.8:
+        if score < 0.75:
           continue
 
-        top_k = attribute_thresholds[category_id]
-        print("len(attribute_score)", len(attribute_score))
-        print("top_k", top_k)
-
-        if top_k:
-          ind = np.argpartition(attribute_score, len(attribute_score) - top_k)[-top_k:]
-          predicted_attribute_ids = list(attribute_ids[ind])
-          attribute_values = [attributes_map[i] for i in predicted_attribute_ids]
-        else:
-          ind, predicted_attribute_ids, attribute_values = [], [], []
+        ind = np.where(attribute_score >= attribute_thresholds[category_id])
+        predicted_attribute_ids = attribute_ids[ind]
+        attribute_values = [attributes_map[i] for i in predicted_attribute_ids]
 
         print("category_id", category_id)
         print("class Name: ", label_map_dict[category_id]['name'])
-        print("allowed n attributes", top_k)
+        print("Threshold:", attribute_thresholds[category_id])
         print("attribute_score", attribute_score)
         print("index", ind)
         print("Attribute IDs: ", predicted_attribute_ids)
