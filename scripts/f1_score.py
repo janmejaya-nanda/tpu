@@ -41,7 +41,6 @@ def main(argv):
     del validation_json
     gc.collect()
 
-
     y_true, y_pred = [], []
     for image_id, pred_attr in predicted_attributes_by_image_id.items():
         y_pred.append(pred_attr)

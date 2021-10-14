@@ -87,8 +87,6 @@ flags.DEFINE_string('attribute_json', None, "Json having attributes and ID mappi
 flags.DEFINE_string('result_csv_path', None, "path to save result in CSV")
 flags.DEFINE_string('meta_file_path', None, "path to meta file")
 flags.DEFINE_string('weights_path', None, "weights path")
-flags.DEFINE_string('attribute_threshold_json', None, "A JSON containing threshold for each category and attribute "
-                                                      "combination")
 
 attribute_thresholds = [0.007834, 0.007371, 0.00714, 0.003209, 0.003672, 0.003209, 0.003209, 0.003209, 0.003209,
                         0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209,
@@ -224,108 +222,107 @@ def main(unused_argv):
             'classes': np_classes,
             'scores': np_scores,
             'attributes': np_attributes,
-            'masks': encoded_masks,
-            'attributes_prob': sess.run(tf.nn.softmax(np_attributes, axis=1))
+            'masks': encoded_masks
         })
 
-        image_with_detections = (
-            visualization_utils.visualize_boxes_and_labels_on_image_array(
-                np_image,
-                np_boxes,
-                np_classes,
-                np_scores,
-                label_map_dict,
-                instance_masks=np_masks,
-                use_normalized_coordinates=False,
-                max_boxes_to_draw=FLAGS.max_boxes_to_draw,
-                min_score_thresh=FLAGS.min_score_threshold))
-        image_with_detections_list.append(image_with_detections)
+        # image_with_detections = (
+        #     visualization_utils.visualize_boxes_and_labels_on_image_array(
+        #         np_image,
+        #         np_boxes,
+        #         np_classes,
+        #         np_scores,
+        #         label_map_dict,
+        #         instance_masks=np_masks,
+        #         use_normalized_coordinates=False,
+        #         max_boxes_to_draw=FLAGS.max_boxes_to_draw,
+        #         min_score_thresh=FLAGS.min_score_threshold))
+        # image_with_detections_list.append(image_with_detections)
 
-  # preparing result in CSV
-  if FLAGS.result_csv_path:
-    if not (FLAGS.attribute_json and FLAGS.attribute_threshold_json):
-      raise Exception("Missing attribute json mapping")
-    with open(FLAGS.attribute_json) as f:
-      data = json.load(f)
-      attributes_map = dict([(attribute['id'], attribute['name']) for attribute in data['attributes']])
-      attribute_ids = np.array([i[0] for i in sorted(attributes_map.items(), key=lambda x: x[0])])
-
-    csv_data = []
-    for i in res:
-      for indx, attribute_score in enumerate(i['attributes_prob']):
-        if i['scores'][indx] < 0.8:
-          continue
-        
-        category_id = i['classes'][indx]
-        ind = np.where(attribute_score >= attribute_thresholds[category_id])
-        predicted_attribute_ids = attribute_ids[ind]
-        attribute_values = [attributes_map[i] for i in predicted_attribute_ids]
-
-        # if attribute_value in required_attributes:
-        csv_data.append([i['image_file'].split('/')[-1], label_map_dict[category_id]['name'], ','.join(attribute_values), i['boxes'][indx], i['masks'][indx]])
-    csv_columns = ['Images file', 'Category value', 'Attribute value', 'Bounding Boxes', "Mask"]
-    df = pd.DataFrame(data=csv_data, columns=csv_columns)
-    df.to_csv(FLAGS.result_csv_path)
-
-  print(' - Saving the outputs...')
-  formatted_image_with_detections_list = [
-      Image.fromarray(image.astype(np.uint8))
-      for image in image_with_detections_list]
-  html_str = '<html>'
-  image_strs = []
-  for formatted_image in formatted_image_with_detections_list:
-    with io.BytesIO() as stream:
-      formatted_image.save(stream, format='JPEG')
-      data_uri = base64.b64encode(stream.getvalue()).decode('utf-8')
-    image_strs.append(
-        '<img src="data:image/jpeg;base64,{}", height=800>'
-        .format(data_uri))
-  images_str = ' '.join(image_strs)
-  html_str += images_str
-  html_str += '</html>'
-  with tf.gfile.GFile(FLAGS.output_html, 'w') as f:
-    f.write(html_str)
+  # # preparing result in CSV
+  # if FLAGS.result_csv_path:
+  #   if not (FLAGS.attribute_json and FLAGS.attribute_threshold_json):
+  #     raise Exception("Missing attribute json mapping")
+  #   with open(FLAGS.attribute_json) as f:
+  #     data = json.load(f)
+  #     attributes_map = dict([(attribute['id'], attribute['name']) for attribute in data['attributes']])
+  #     attribute_ids = np.array([i[0] for i in sorted(attributes_map.items(), key=lambda x: x[0])])
+  #
+  #   csv_data = []
+  #   for i in res:
+  #     for indx, attribute_score in enumerate(i['attributes_prob']):
+  #       if i['scores'][indx] < 0.8:
+  #         continue
+  #
+  #       category_id = i['classes'][indx]
+  #       ind = np.where(attribute_score >= attribute_thresholds[category_id])
+  #       predicted_attribute_ids = attribute_ids[ind]
+  #       attribute_values = [attributes_map[i] for i in predicted_attribute_ids]
+  #
+  #       # if attribute_value in required_attributes:
+  #       csv_data.append([i['image_file'].split('/')[-1], label_map_dict[category_id]['name'], ','.join(attribute_values), i['boxes'][indx], i['masks'][indx]])
+  #   csv_columns = ['Images file', 'Category value', 'Attribute value', 'Bounding Boxes', "Mask"]
+  #   df = pd.DataFrame(data=csv_data, columns=csv_columns)
+  #   df.to_csv(FLAGS.result_csv_path)
+  #
+  # print(' - Saving the outputs...')
+  # formatted_image_with_detections_list = [
+  #     Image.fromarray(image.astype(np.uint8))
+  #     for image in image_with_detections_list]
+  # html_str = '<html>'
+  # image_strs = []
+  # for formatted_image in formatted_image_with_detections_list:
+  #   with io.BytesIO() as stream:
+  #     formatted_image.save(stream, format='JPEG')
+  #     data_uri = base64.b64encode(stream.getvalue()).decode('utf-8')
+  #   image_strs.append(
+  #       '<img src="data:image/jpeg;base64,{}", height=800>'
+  #       .format(data_uri))
+  # images_str = ' '.join(image_strs)
+  # html_str += images_str
+  # html_str += '</html>'
+  # with tf.gfile.GFile(FLAGS.output_html, 'w') as f:
+  #   f.write(html_str)
   np.save(FLAGS.output_file, res)
 
-  # saving result in COCO format
-  if FLAGS.output_coco:
-    if not (FLAGS.attribute_json and FLAGS.attribute_threshold_json):
-      raise Exception("Missing attribute json mapping")
-    with open(FLAGS.attribute_json) as f:
-      data = json.load(f)
-      attributes_map = dict([(attribute['id'], attribute['name']) for attribute in data['attributes']])
-      attribute_ids = np.array([i[0] for i in sorted(attributes_map.items(), key=lambda x: x[0])])
-
-    print("saving result in COCO format to: {}".format(FLAGS.output_coco))
-    print("$"*40)
-    coco_result = []
-    for i in res:
-      for box, category_id, attribute_score, score in zip(i['boxes'], i['classes'], i['attributes_prob'], i['scores']):
-        if score < 0.75:
-          continue
-
-        ind = np.where(attribute_score >= attribute_thresholds[category_id])
-        predicted_attribute_ids = attribute_ids[ind]
-        attribute_values = [attributes_map[i] for i in predicted_attribute_ids]
-
-        print("category_id", category_id)
-        print("class Name: ", label_map_dict[category_id]['name'])
-        print("Threshold:", attribute_thresholds[category_id])
-        print("attribute_score", attribute_score)
-        print("index", ind)
-        print("Attribute IDs: ", predicted_attribute_ids)
-        print("Attribute Name: ", attribute_values)
-
-        y1, x1, y2, x2 = box[0], box[1], box[2], box[3]
-        coco_result.append({
-          "image_id": i['image_file'].split('/')[-1].replace('.jpg', ''), 
-          "category_id": category_id, 
-          "attribute_ids": predicted_attribute_ids,
-          "bbox": [x1, y1, x2-x1, y2-y1],
-          "score": float(score),
-        })
-    with open(FLAGS.output_coco, 'w') as f:
-        json.dump(coco_result, f, cls=NpEncoder)
+  # # saving result in COCO format
+  # if FLAGS.output_coco:
+  #   if not (FLAGS.attribute_json and FLAGS.attribute_threshold_json):
+  #     raise Exception("Missing attribute json mapping")
+  #   with open(FLAGS.attribute_json) as f:
+  #     data = json.load(f)
+  #     attributes_map = dict([(attribute['id'], attribute['name']) for attribute in data['attributes']])
+  #     attribute_ids = np.array([i[0] for i in sorted(attributes_map.items(), key=lambda x: x[0])])
+  #
+  #   print("saving result in COCO format to: {}".format(FLAGS.output_coco))
+  #   print("$"*40)
+  #   coco_result = []
+  #   for i in res:
+  #     for box, category_id, attribute_score, score in zip(i['boxes'], i['classes'], i['attributes_prob'], i['scores']):
+  #       if score < 0.75:
+  #         continue
+  #
+  #       ind = np.where(attribute_score >= attribute_thresholds[category_id])
+  #       predicted_attribute_ids = attribute_ids[ind]
+  #       attribute_values = [attributes_map[i] for i in predicted_attribute_ids]
+  #
+  #       print("category_id", category_id)
+  #       print("class Name: ", label_map_dict[category_id]['name'])
+  #       print("Threshold:", attribute_thresholds[category_id])
+  #       print("attribute_score", attribute_score)
+  #       print("index", ind)
+  #       print("Attribute IDs: ", predicted_attribute_ids)
+  #       print("Attribute Name: ", attribute_values)
+  #
+  #       y1, x1, y2, x2 = box[0], box[1], box[2], box[3]
+  #       coco_result.append({
+  #         "image_id": i['image_file'].split('/')[-1].replace('.jpg', ''),
+  #         "category_id": category_id,
+  #         "attribute_ids": predicted_attribute_ids,
+  #         "bbox": [x1, y1, x2-x1, y2-y1],
+  #         "score": float(score),
+  #       })
+  #   with open(FLAGS.output_coco, 'w') as f:
+  #       json.dump(coco_result, f, cls=NpEncoder)
   print("$"*40)
 
 
