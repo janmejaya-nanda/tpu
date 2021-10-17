@@ -247,7 +247,7 @@ def main(unused_argv):
 
   # # preparing result in CSV
   # if FLAGS.result_csv_path:
-  #   if not (FLAGS.attribute_json and FLAGS.attribute_threshold_json):
+  #   if not (FLAGS.attribute_json):
   #     raise Exception("Missing attribute json mapping")
   #   with open(FLAGS.attribute_json) as f:
   #     data = json.load(f)
@@ -293,7 +293,7 @@ def main(unused_argv):
 
   # saving result in COCO format
   if FLAGS.output_coco:
-    if not (FLAGS.attribute_json and FLAGS.attribute_threshold_json):
+    if not (FLAGS.attribute_json):
       raise Exception("Missing attribute json mapping")
     with open(FLAGS.attribute_json) as f:
       data = json.load(f)
