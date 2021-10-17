@@ -256,7 +256,7 @@ def main(unused_argv):
   #
   #   csv_data = []
   #   for i in res:
-  #     for indx, attribute_score in enumerate(i['attributes_prob']):
+  #     for indx, attribute_score in enumerate(i['attributes']):
   #       if i['scores'][indx] < 0.8:
   #         continue
   #
@@ -304,7 +304,7 @@ def main(unused_argv):
     print("$"*40)
     coco_result = []
     for i in res:
-      for box, category_id, attribute_score, score in zip(i['boxes'], i['classes'], i['attributes_prob'], i['scores']):
+      for box, category_id, attribute_score, score in zip(i['boxes'], i['classes'], i['attributes'], i['scores']):
         if score < 0.75:
           continue
 
