@@ -1,4 +1,5 @@
 import json
+import gc
 
 import numpy as np
 import pandas as pd
@@ -9,6 +10,7 @@ from sklearn.metrics import f1_score
 IOU_THRESHOLD = 0.5
 N_ATTRIBUTE_THRESHOLD = 50
 NUMBER_OF_CATEGORY = 46
+MAX_ATTRIBUTE_ID = 340
 
 
 class NpEncoder(json.JSONEncoder):
@@ -89,16 +91,19 @@ def get_iou(bb1, bb2):
 
 
 # with open('/home/user/impact/experiments_repo/fashionpedia/instances_attributes_val2020.json') as f:
-#     instances_attributes = json.load(f)
+#     instances_attributes_val = json.load(f)
+# with open('/home/user/impact/experiments_repo/fashionpedia/instances_attributes_train2020.json') as f:
+#     instances_attributes_train = json.load(f)
 # with open('/home/user/impact/experiments_repo/fashionpedia/label_descriptions.json') as f:
-#     data = json.load(f)
-#     attributes_map = dict([(attribute['id'], attribute['name']) for attribute in data['attributes']])
+#     attributes_map = dict([(attribute['id'], attribute['name']) for attribute in json.load(f)['attributes']])
 #     attribute_ids = np.array([i[0] for i in sorted(attributes_map.items(), key=lambda x: x[0])])
 #
-# data = np.load('/home/user/impact/experiments_repo/fashionpedia/output.npy', allow_pickle=True)
+# val_data = np.load('/home/user/impact/experiments_repo/fashionpedia/mask_RCNN_output_all.npy', allow_pickle=True)
+# train_data = np.load('/home/user/impact/experiments_repo/fashionpedia/mask_RCNN_output_train_all.npy', allow_pickle=True)
+# data = list(val_data) + list(train_data)
 #
-# annotations_df = pd.DataFrame(instances_attributes['annotations'])
-# images_df = pd.DataFrame(instances_attributes['images'])
+# annotations_df = pd.DataFrame(instances_attributes_val['annotations'] + instances_attributes_train['annotations'])
+# images_df = pd.DataFrame(instances_attributes_val['images'] + instances_attributes_train['images'])
 # images_annotations = images_df.merge(annotations_df, how="inner", left_on='id', right_on='image_id',
 #                                      suffixes=(None, "_y"), sort=True)
 # images_annotations_grp = images_annotations.groupby(['image_id'], as_index=False)
@@ -106,12 +111,15 @@ def get_iou(bb1, bb2):
 # data = [{**i, 'image_id': file_name_by_image_id[i['image_file'].split('/')[-1]]} for i in data if i[
 #     'image_file'].split('/')[-1] in file_name_by_image_id]
 #
+# del instances_attributes_val, instances_attributes_train, annotations_df, images_df, val_data, train_data
+# gc.collect()
+#
 # min_attribute_score, max_attribute_score = 1, 0
 # for i in data:
-#     if i['attributes_prob'].min() < min_attribute_score:
-#         min_attribute_score = i['attributes_prob'].min()
-#     if i['attributes_prob'].max() > max_attribute_score:
-#         max_attribute_score = i['attributes_prob'].max()
+#     if i['attributes'].min() < min_attribute_score:
+#         min_attribute_score = i['attributes'].min()
+#     if i['attributes'].max() > max_attribute_score:
+#         max_attribute_score = i['attributes'].max()
 # increment = (max_attribute_score - min_attribute_score) / N_ATTRIBUTE_THRESHOLD
 # attribute_score_range = np.arange(min_attribute_score, max_attribute_score, increment)
 #
@@ -121,8 +129,8 @@ def get_iou(bb1, bb2):
 #         y_true, y_pred = [], []
 #         for result in data:
 #             for box, result_category_id, attribute_score, score in zip(result['boxes'], result['classes'],
-#                                                                  result['attributes_prob'], result['scores']):
-#                 if (result_category_id - 1) != category_id:
+#                                                                  result['attributes'], result['scores']):
+#                 if result_category_id != category_id:
 #                     continue
 #                 ind = np.argwhere(attribute_score > attribute_threshold).ravel()
 #                 predicted_attribute_ids = list(attribute_ids[ind])
@@ -135,26 +143,27 @@ def get_iou(bb1, bb2):
 #                                   bb2={'x1': box2[1], 'y1': box2[0], 'x2': box2[3], 'y2': box2[2]})
 #
 #                     # modifying result category to 0th id
-#                     if iou > IOU_THRESHOLD and ((result_category_id - 1) == annotation_category_id):
+#                     if iou > IOU_THRESHOLD and (result_category_id == annotation_category_id):
 #                         y_true.append(annotation_attribute_ids)
 #                         y_pred.append(predicted_attribute_ids)
+#                         break
 #                 else:
 #                     # Unable to find suitable annotation
 #                     y_true.append([])
 #                     y_pred.append(predicted_attribute_ids)
 #
 #         mlb = MultiLabelBinarizer()
-#         mlb.fit([np.arange(0, 340)])
+#         mlb.fit([np.arange(0, MAX_ATTRIBUTE_ID + 1)])
 #
 #         score_f1 = f1_score(mlb.transform(y_true), mlb.transform(y_pred), average='macro')
 #         print(score_f1)
 #
 #         f1_by_threshold[attribute_threshold][category_id] = score_f1
 #
-# with open('/home/user/impact/experiments_repo/fashionpedia/f1_by_threshold.json', 'w') as f:
+# with open('/home/user/impact/experiments_repo/fashionpedia/f1_by_threshold_all.json', 'w') as f:
 #     json.dump(f1_by_threshold, f, cls=NpEncoder)
 
-with open('/home/user/impact/experiments_repo/fashionpedia/f1_by_threshold.json') as f:
+with open('/home/user/impact/experiments_repo/fashionpedia/f1_by_threshold_all.json') as f:
     f1_by_threshold = json.load(f)
 
 thresholds, scores = np.array([]), np.array([])
@@ -166,4 +175,7 @@ for t, score in f1_by_threshold.items():
         scores = score
 
 print("Heighest F1 Score:", scores.max(axis=0))
-print("Thresholds:", [round(i, 6) for i in map(float, thresholds[scores.argmax(axis=0)])])
+print("Thresholds:", [round(i, 9) for i in map(float, thresholds[scores.argmax(axis=0)])])
+
+import pdb
+pdb.set_trace()

@@ -88,11 +88,18 @@ flags.DEFINE_string('result_csv_path', None, "path to save result in CSV")
 flags.DEFINE_string('meta_file_path', None, "path to meta file")
 flags.DEFINE_string('weights_path', None, "weights path")
 
-attribute_thresholds = [0.007834, 0.007371, 0.00714, 0.003209, 0.003672, 0.003209, 0.003209, 0.003209, 0.003209,
-                        0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209,
-                        0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209,
-                        0.003209, 0.003209, 0.003209, 0.003209, 0.003325, 0.003209, 0.003209, 0.003209, 0.003209,
-                        0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209]
+# attribute_thresholds = [0.007834, 0.007371, 0.00714, 0.003209, 0.003672, 0.003209, 0.003209, 0.003209, 0.003209,
+#                         0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209,
+#                         0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209,
+#                         0.003209, 0.003209, 0.003209, 0.003209, 0.003325, 0.003209, 0.003209, 0.003209, 0.003209,
+#                         0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209]
+
+attribute_thresholds = [0.159252503, 0.676816745, 0.77634833, 0.557378843, 0.318503039, 0.895786232, 0.119439869,
+                        0.119439869, 0.318503039, 0.298596722, 0.099533552, 1.967e-06, 0.318503039, 1.967e-06,
+                        1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06,
+                        1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06, 0.019908284,
+                        1.967e-06, 0.935598866, 1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06,
+                        1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06]
 
 
 class NpEncoder(json.JSONEncoder):
@@ -284,45 +291,45 @@ def main(unused_argv):
   #   f.write(html_str)
   np.save(FLAGS.output_file, res)
 
-  # # saving result in COCO format
-  # if FLAGS.output_coco:
-  #   if not (FLAGS.attribute_json and FLAGS.attribute_threshold_json):
-  #     raise Exception("Missing attribute json mapping")
-  #   with open(FLAGS.attribute_json) as f:
-  #     data = json.load(f)
-  #     attributes_map = dict([(attribute['id'], attribute['name']) for attribute in data['attributes']])
-  #     attribute_ids = np.array([i[0] for i in sorted(attributes_map.items(), key=lambda x: x[0])])
-  #
-  #   print("saving result in COCO format to: {}".format(FLAGS.output_coco))
-  #   print("$"*40)
-  #   coco_result = []
-  #   for i in res:
-  #     for box, category_id, attribute_score, score in zip(i['boxes'], i['classes'], i['attributes_prob'], i['scores']):
-  #       if score < 0.75:
-  #         continue
-  #
-  #       ind = np.where(attribute_score >= attribute_thresholds[category_id])
-  #       predicted_attribute_ids = attribute_ids[ind]
-  #       attribute_values = [attributes_map[i] for i in predicted_attribute_ids]
-  #
-  #       print("category_id", category_id)
-  #       print("class Name: ", label_map_dict[category_id]['name'])
-  #       print("Threshold:", attribute_thresholds[category_id])
-  #       print("attribute_score", attribute_score)
-  #       print("index", ind)
-  #       print("Attribute IDs: ", predicted_attribute_ids)
-  #       print("Attribute Name: ", attribute_values)
-  #
-  #       y1, x1, y2, x2 = box[0], box[1], box[2], box[3]
-  #       coco_result.append({
-  #         "image_id": i['image_file'].split('/')[-1].replace('.jpg', ''),
-  #         "category_id": category_id,
-  #         "attribute_ids": predicted_attribute_ids,
-  #         "bbox": [x1, y1, x2-x1, y2-y1],
-  #         "score": float(score),
-  #       })
-  #   with open(FLAGS.output_coco, 'w') as f:
-  #       json.dump(coco_result, f, cls=NpEncoder)
+  # saving result in COCO format
+  if FLAGS.output_coco:
+    if not (FLAGS.attribute_json and FLAGS.attribute_threshold_json):
+      raise Exception("Missing attribute json mapping")
+    with open(FLAGS.attribute_json) as f:
+      data = json.load(f)
+      attributes_map = dict([(attribute['id'], attribute['name']) for attribute in data['attributes']])
+      attribute_ids = np.array([i[0] for i in sorted(attributes_map.items(), key=lambda x: x[0])])
+
+    print("saving result in COCO format to: {}".format(FLAGS.output_coco))
+    print("$"*40)
+    coco_result = []
+    for i in res:
+      for box, category_id, attribute_score, score in zip(i['boxes'], i['classes'], i['attributes_prob'], i['scores']):
+        if score < 0.75:
+          continue
+
+        ind = np.where(attribute_score >= attribute_thresholds[category_id])
+        predicted_attribute_ids = attribute_ids[ind]
+        attribute_values = [attributes_map[i] for i in predicted_attribute_ids]
+
+        print("category_id", category_id)
+        print("class Name: ", label_map_dict[category_id]['name'])
+        print("Threshold:", attribute_thresholds[category_id])
+        print("attribute_score", attribute_score)
+        print("index", ind)
+        print("Attribute IDs: ", predicted_attribute_ids)
+        print("Attribute Name: ", attribute_values)
+
+        y1, x1, y2, x2 = box[0], box[1], box[2], box[3]
+        coco_result.append({
+          "image_id": i['image_file'].split('/')[-1].replace('.jpg', ''),
+          "category_id": category_id,
+          "attribute_ids": predicted_attribute_ids,
+          "bbox": [x1, y1, x2-x1, y2-y1],
+          "score": float(score),
+        })
+    with open(FLAGS.output_coco, 'w') as f:
+        json.dump(coco_result, f, cls=NpEncoder)
   print("$"*40)
 
 
