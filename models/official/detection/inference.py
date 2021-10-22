@@ -271,25 +271,26 @@ def main(unused_argv):
     df = pd.DataFrame(data=csv_data, columns=csv_columns)
     df.to_csv(FLAGS.result_csv_path)
 
-  print(' - Saving the outputs...')
-  formatted_image_with_detections_list = [
-      Image.fromarray(image.astype(np.uint8))
-      for image in image_with_detections_list]
-  html_str = '<html>'
-  image_strs = []
-  for formatted_image in formatted_image_with_detections_list:
-    with io.BytesIO() as stream:
-      formatted_image.save(stream, format='JPEG')
-      data_uri = base64.b64encode(stream.getvalue()).decode('utf-8')
-    image_strs.append(
-        '<img src="data:image/jpeg;base64,{}", height=800>'
-        .format(data_uri))
-  images_str = ' '.join(image_strs)
-  html_str += images_str
-  html_str += '</html>'
-  with tf.gfile.GFile(FLAGS.output_html, 'w') as f:
-    f.write(html_str)
-  np.save(FLAGS.output_file, res)
+  if FLAGS.output_html:
+      print(' - Saving the outputs in HTML and  Numpy ...')
+      formatted_image_with_detections_list = [
+          Image.fromarray(image.astype(np.uint8))
+          for image in image_with_detections_list]
+      html_str = '<html>'
+      image_strs = []
+      for formatted_image in formatted_image_with_detections_list:
+        with io.BytesIO() as stream:
+          formatted_image.save(stream, format='JPEG')
+          data_uri = base64.b64encode(stream.getvalue()).decode('utf-8')
+        image_strs.append(
+            '<img src="data:image/jpeg;base64,{}", height=800>'
+            .format(data_uri))
+      images_str = ' '.join(image_strs)
+      html_str += images_str
+      html_str += '</html>'
+      with tf.gfile.GFile(FLAGS.output_html, 'w') as f:
+        f.write(html_str)
+      np.save(FLAGS.output_file, res)
 
   # saving result in COCO format
   if FLAGS.output_coco:
