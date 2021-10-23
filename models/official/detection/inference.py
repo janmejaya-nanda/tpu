@@ -85,8 +85,7 @@ flags.DEFINE_float(
 flags.DEFINE_string('output_coco', '/tmp/out-coco.json', "Whether to save output in COCO format.")
 flags.DEFINE_string('attribute_json', None, "Json having attributes and ID mapping")
 flags.DEFINE_string('result_csv_path', None, "path to save result in CSV")
-flags.DEFINE_string('meta_file_path', None, "path to meta file")
-flags.DEFINE_string('weights_path', None, "weights path")
+flags.DEFINE_string('possible_category_attribute_mapping', None)
 
 # attribute_thresholds = [0.007834, 0.007371, 0.00714, 0.003209, 0.003672, 0.003209, 0.003209, 0.003209, 0.003209,
 #                         0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209,
@@ -263,6 +262,13 @@ def main(unused_argv):
         category_id = i['classes'][indx]
         ind = np.where(attribute_score >= attribute_thresholds[category_id])
         predicted_attribute_ids = attribute_ids[ind]
+        # performing some post processing on attribute prediction
+        # Adding some inherent knowledge/mapping that exist in training sample
+        # removing all attribute ids which are never associated with the category in training sample.
+        if FLAGS.possible_category_attribute_mapping:
+            predicted_attribute_ids = list(
+                set(predicted_attribute_ids) & set(FLAGS.possible_category_attribute_mapping[category_id])
+            )
         attribute_values = [attributes_map[i] for i in predicted_attribute_ids]
 
         # if attribute_value in required_attributes:
@@ -311,6 +317,13 @@ def main(unused_argv):
 
         ind = np.where(attribute_score >= attribute_thresholds[category_id])
         predicted_attribute_ids = attribute_ids[ind]
+        # performing some post processing on attribute prediction
+        # Adding some inherent knowledge/mapping that exist in training sample
+        # removing all attribute ids which are never associated with the category in training sample.
+        if FLAGS.possible_category_attribute_mapping:
+            predicted_attribute_ids = list(
+                set(predicted_attribute_ids) & set(FLAGS.possible_category_attribute_mapping[category_id])
+            )
         attribute_values = [attributes_map[i] for i in predicted_attribute_ids]
 
         print("category_id", category_id)

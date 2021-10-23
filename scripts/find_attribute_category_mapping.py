@@ -19,6 +19,8 @@ for i in category_attributes_mapping:
     print(i)
     print("NUmber of attributes", len(category_attributes_mapping[i]))
 
+with open('/home/user/impact/experiments_repo/fashionpedia/possible-category-attribute-mapping.json', 'w') as f:
+    json.dump(category_attributes_mapping, f)
 
 for result in coco_result:
     cat_id = result['category_id']
@@ -26,6 +28,3 @@ for result in coco_result:
 
 with open('/home/user/impact/experiments_repo/fashionpedia/COCO_with_imageid2_filtered_for_non_mapped_attribute.json', 'w') as f:
     json.dump(coco_result, f)
-
-import pdb
-pdb.set_trace()
