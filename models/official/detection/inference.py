@@ -296,6 +296,8 @@ def main(unused_argv):
       html_str += '</html>'
       with tf.gfile.GFile(FLAGS.output_html, 'w') as f:
         f.write(html_str)
+
+  if FLAGS.output_file:
       np.save(FLAGS.output_file, res)
 
   # saving result in COCO format

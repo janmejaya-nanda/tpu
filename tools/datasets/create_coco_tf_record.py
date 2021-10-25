@@ -270,7 +270,7 @@ def _create_tf_record_from_coco_annotations(images_info_file,
                                             num_shards,
                                             object_annotations_file=None,
                                             caption_annotations_file=None,
-                                            include_masks=False):
+                                            include_masks=True):
   """Loads COCO annotation json files and converts to tf.Record format.
 
   Args:
