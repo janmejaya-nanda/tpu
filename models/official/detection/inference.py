@@ -85,7 +85,8 @@ flags.DEFINE_float(
 flags.DEFINE_string('output_coco', '/tmp/out-coco.json', "Whether to save output in COCO format.")
 flags.DEFINE_string('attribute_json', None, "Json having attributes and ID mapping")
 flags.DEFINE_string('result_csv_path', None, "path to save result in CSV")
-flags.DEFINE_string('possible_category_attribute_mapping', None)
+flags.DEFINE_string('possible_category_attribute_mapping', None, 'A mapping containing allpossible attribute to '
+                                                                 'category mapping.')
 
 # attribute_thresholds = [0.007834, 0.007371, 0.00714, 0.003209, 0.003672, 0.003209, 0.003209, 0.003209, 0.003209,
 #                         0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209,
