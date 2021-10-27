@@ -273,7 +273,7 @@ def main(unused_argv):
         # removing all attribute ids which are never associated with the category in training sample.
         if possible_category_attribute_mapping:
             predicted_attribute_ids = list(
-                set(predicted_attribute_ids) & set(possible_category_attribute_mapping[category_id])
+                set(predicted_attribute_ids) & set(possible_category_attribute_mapping[str(category_id)])
             )
         attribute_values = [attributes_map[i] for i in predicted_attribute_ids]
 
@@ -335,7 +335,7 @@ def main(unused_argv):
         # removing all attribute ids which are never associated with the category in training sample.
         if possible_category_attribute_mapping:
             predicted_attribute_ids = list(
-                set(predicted_attribute_ids) & set(possible_category_attribute_mapping[category_id])
+                set(predicted_attribute_ids) & set(possible_category_attribute_mapping[str(category_id)])
             )
         attribute_values = [attributes_map[i] for i in predicted_attribute_ids]
 
