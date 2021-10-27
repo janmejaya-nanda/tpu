@@ -94,11 +94,11 @@ flags.DEFINE_string('possible_category_attribute_mapping', None, 'A mapping cont
 #                         0.003209, 0.003209, 0.003209, 0.003209, 0.003325, 0.003209, 0.003209, 0.003209, 0.003209,
 #                         0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209, 0.003209]
 
-attribute_thresholds = [0.159252503, 0.676816745, 0.77634833, 0.557378843, 0.318503039, 0.895786232, 0.119439869,
+attribute_thresholds = [0.159252503, 0.676816745, 0.77634833, 0.557378843, 0.318503039, 0.895786232, 0.129439869,
                         0.119439869, 0.318503039, 0.298596722, 0.099533552, 1.967e-06, 0.318503039, 1.967e-06,
                         1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06,
-                        1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06, 0.019908284,
-                        1.967e-06, 0.935598866, 1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06,
+                        1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06, 0.009908284,
+                        1.967e-06, 0.0935598866, 1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06,
                         1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06, 1.967e-06]
 
 
@@ -254,6 +254,11 @@ def main(unused_argv):
       attributes_map = dict([(attribute['id'], attribute['name']) for attribute in data['attributes']])
       attribute_ids = np.array([i[0] for i in sorted(attributes_map.items(), key=lambda x: x[0])])
 
+    possible_category_attribute_mapping = None
+    if FLAGS.possible_category_attribute_mapping:
+        with open(FLAGS.possible_category_attribute_mapping) as f:
+            possible_category_attribute_mapping = json.load(f)
+
     csv_data = []
     for i in res:
       for indx, attribute_score in enumerate(i['attributes']):
@@ -266,9 +271,9 @@ def main(unused_argv):
         # performing some post processing on attribute prediction
         # Adding some inherent knowledge/mapping that exist in training sample
         # removing all attribute ids which are never associated with the category in training sample.
-        if FLAGS.possible_category_attribute_mapping:
+        if possible_category_attribute_mapping:
             predicted_attribute_ids = list(
-                set(predicted_attribute_ids) & set(FLAGS.possible_category_attribute_mapping[category_id])
+                set(predicted_attribute_ids) & set(possible_category_attribute_mapping[category_id])
             )
         attribute_values = [attributes_map[i] for i in predicted_attribute_ids]
 
@@ -310,6 +315,11 @@ def main(unused_argv):
       attributes_map = dict([(attribute['id'], attribute['name']) for attribute in data['attributes']])
       attribute_ids = np.array([i[0] for i in sorted(attributes_map.items(), key=lambda x: x[0])])
 
+    possible_category_attribute_mapping = None
+    if FLAGS.possible_category_attribute_mapping:
+        with open(FLAGS.possible_category_attribute_mapping) as f:
+            possible_category_attribute_mapping = json.load(f)
+
     print("saving result in COCO format to: {}".format(FLAGS.output_coco))
     print("$"*40)
     coco_result = []
@@ -323,9 +333,9 @@ def main(unused_argv):
         # performing some post processing on attribute prediction
         # Adding some inherent knowledge/mapping that exist in training sample
         # removing all attribute ids which are never associated with the category in training sample.
-        if FLAGS.possible_category_attribute_mapping:
+        if possible_category_attribute_mapping:
             predicted_attribute_ids = list(
-                set(predicted_attribute_ids) & set(FLAGS.possible_category_attribute_mapping[category_id])
+                set(predicted_attribute_ids) & set(possible_category_attribute_mapping[category_id])
             )
         attribute_values = [attributes_map[i] for i in predicted_attribute_ids]
 

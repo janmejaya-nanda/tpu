@@ -168,7 +168,7 @@ def create_tf_example(image,
                                             image_height, image_width)
         binary_mask = mask.decode(run_len_encoding)
         if not object_annotations['iscrowd']:
-          binary_mask = np.amax(binary_mask, axis=2)
+            binary_mask = np.amax(binary_mask, axis=2)
         pil_image = PIL.Image.fromarray(binary_mask)
         output_io = io.BytesIO()
         pil_image.save(output_io, format='PNG')
