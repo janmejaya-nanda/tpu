@@ -225,25 +225,25 @@ def main(unused_argv):
 
         res.append({
             'image_file': image_file,
-            'boxes': np_boxes,
+            # 'boxes': np_boxes,
             'classes': np_classes,
             'scores': np_scores,
             'attributes': np_attributes,
-            'masks': encoded_masks
+            # 'masks': encoded_masks
         })
 
-        image_with_detections = (
-            visualization_utils.visualize_boxes_and_labels_on_image_array(
-                np_image,
-                np_boxes,
-                np_classes,
-                np_scores,
-                label_map_dict,
-                instance_masks=np_masks,
-                use_normalized_coordinates=False,
-                max_boxes_to_draw=FLAGS.max_boxes_to_draw,
-                min_score_thresh=FLAGS.min_score_threshold))
-        image_with_detections_list.append(image_with_detections)
+        # image_with_detections = (
+        #     visualization_utils.visualize_boxes_and_labels_on_image_array(
+        #         np_image,
+        #         np_boxes,
+        #         np_classes,
+        #         np_scores,
+        #         label_map_dict,
+        #         instance_masks=np_masks,
+        #         use_normalized_coordinates=False,
+        #         max_boxes_to_draw=FLAGS.max_boxes_to_draw,
+        #         min_score_thresh=FLAGS.min_score_threshold))
+        # image_with_detections_list.append(image_with_detections)
 
   # preparing result in CSV
   if FLAGS.result_csv_path:
@@ -278,8 +278,10 @@ def main(unused_argv):
         attribute_values = [attributes_map[i] for i in predicted_attribute_ids]
 
         # if attribute_value in required_attributes:
-        csv_data.append([i['image_file'].split('/')[-1], label_map_dict[category_id]['name'], ','.join(attribute_values), i['boxes'][indx], i['masks'][indx]])
-    csv_columns = ['Images file', 'Category value', 'Attribute value', 'Bounding Boxes', "Mask"]
+        csv_data.append([i['image_file'].split('/')[-1], label_map_dict[category_id]['name'], ','
+                                                                                              ''.join(
+            attribute_values)])#, i['boxes'][indx], i['masks'][indx]])
+    csv_columns = ['Images file', 'Category value', 'Attribute value']#, 'Bounding Boxes', "Mask"]
     df = pd.DataFrame(data=csv_data, columns=csv_columns)
     df.to_csv(FLAGS.result_csv_path)
 
