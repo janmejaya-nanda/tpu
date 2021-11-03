@@ -224,7 +224,7 @@ class TpuExecutor(object):
       # for key, val in outputs.items():
       #   if key[0:5] == 'loss_':
       #     losses[key[5::]] /= counter
-      metrics = self._evaluator.evaluate()
+      # metrics = self._evaluator.evaluate()
 
       # # Summary writer writes out eval metrics.
       # output_dir = os.path.join(self._model_dir,
@@ -250,6 +250,7 @@ class TpuExecutor(object):
       )
       logging.info("Exported best model")
 
+    metrics = None  # please remove this
     logging.info('Eval result: %s', metrics)
     return metrics
 
