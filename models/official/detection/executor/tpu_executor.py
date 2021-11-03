@@ -236,6 +236,8 @@ class TpuExecutor(object):
       # summary_writer.close()
 
       # exporting best model
+      eval_result = self._estimator.evaluate(
+          input_fn, steps=eval_times, checkpoint_path=checkpoint_path)
       best_exporter = tf.estimator.BestExporter(
           name="best_exporter",
           serving_input_receiver_fn=input_fn,
@@ -244,8 +246,7 @@ class TpuExecutor(object):
       best_exporter.export(estimator=self._estimator,
                            export_path=os.path.join(self._model_dir, 'best_model'),
                            checkpoint_path=checkpoint_path,
-                           eval_result=self._estimator.evaluate(
-          input_fn, steps=eval_times, checkpoint_path=checkpoint_path),
+                           eval_result=eval_result,
                            is_the_final_export=False
       )
       logging.info("Exported best model")
