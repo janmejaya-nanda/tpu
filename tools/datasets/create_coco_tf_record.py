@@ -46,6 +46,10 @@ from utils import label_map_util
 import tensorflow.compat.v1 as tf
 
 
+# Corrupt Images Linux Command
+# jpeginfo -c *.jpg | grep Corrupt (WARNING)
+
+
 flags.DEFINE_boolean(
     'include_masks', False, 'Whether to include instance segmentations masks '
     '(PNG encoded) in the result. default: False.')
@@ -131,7 +135,7 @@ def create_tf_example(image,
       'image/encoded':
           dataset_util.bytes_feature(encoded_jpg),
       'image/format':
-          dataset_util.bytes_feature('jpeg'.encode('utf8')),
+          dataset_util.bytes_feature('jpg'.encode('utf8')),
   }
 
   num_annotations_skipped = 0

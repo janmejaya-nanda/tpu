@@ -236,6 +236,20 @@ class TpuExecutor(object):
       write_summary(losses, summary_writer, current_step)
       summary_writer.close()
 
+      # exporting best model
+      logging.info("Expoting Best Model.. to")
+      best_exporter = tf.estimator.BestExporter(
+          name="best_exporter",
+          serving_input_receiver_fn=input_fn,
+          event_file_pattern=self._model_dir + '/*.tfevents.*',
+          exports_to_keep=5)
+      tf.estimator.EvalSpec(
+          name='best-exporter-spec',
+          input_fn=input_fn,
+          steps=None,
+          exporters=best_exporter)
+
+
     logging.info('Eval result: %s', metrics)
     return metrics
 
