@@ -23,7 +23,6 @@ import collections
 import os
 
 from absl import logging
-
 import numpy as np
 import six
 import tensorflow.compat.v1 as tf
@@ -237,18 +236,13 @@ class TpuExecutor(object):
       summary_writer.close()
 
       # exporting best model
-      logging.info("Expoting Best Model.. to")
       best_exporter = tf.estimator.BestExporter(
           name="best_exporter",
           serving_input_receiver_fn=input_fn,
           event_file_pattern=self._model_dir + '/*.tfevents.*',
           exports_to_keep=5)
-      tf.estimator.EvalSpec(
-          name='best-exporter-spec',
-          input_fn=input_fn,
-          steps=None,
-          exporters=best_exporter)
-
+      best_exporter.export(estimator=self._estimator, export_path=os.path.join(self._model_dir, 'best_model'))
+      logging.info("Exported best model")
 
     logging.info('Eval result: %s', metrics)
     return metrics
