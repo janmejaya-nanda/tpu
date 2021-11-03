@@ -191,10 +191,10 @@ class TpuExecutor(object):
         current_step = int(os.path.basename(checkpoint_path).split('-')[1])
       else:
         current_step = 0
-      # predictor = self._estimator.predict(
-      #     input_fn=input_fn,
-      #     checkpoint_path=checkpoint_path,
-      #     yield_single_examples=False)
+      predictor = self._estimator.predict(
+          input_fn=input_fn,
+          checkpoint_path=checkpoint_path,
+          yield_single_examples=False)
       # losses = collections.defaultdict(lambda: 0.0)
 
       # counter = 0
@@ -236,8 +236,6 @@ class TpuExecutor(object):
       # summary_writer.close()
 
       # exporting best model
-      eval_result = self._estimator.evaluate(
-          input_fn, steps=eval_times, checkpoint_path=checkpoint_path)
       best_exporter = tf.estimator.BestExporter(
           name="best_exporter",
           serving_input_receiver_fn=input_fn,
@@ -246,7 +244,7 @@ class TpuExecutor(object):
       best_exporter.export(estimator=self._estimator,
                            export_path=os.path.join(self._model_dir, 'best_model'),
                            checkpoint_path=checkpoint_path,
-                           eval_result=eval_result,
+                           eval_result=predictor,
                            is_the_final_export=False
       )
       logging.info("Exported best model")
