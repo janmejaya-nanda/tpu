@@ -235,9 +235,14 @@ class TpuExecutor(object):
       # write_summary(losses, summary_writer, current_step)
       # summary_writer.close()
 
+      def serving_input_receiver_function():
+          receiver_tensors = tf.placeholder(tf.float64, [None, 120, 120])
+          features = receiver_tensors
+          return tf.estimator.export.TensorServingInputReceiver(features, receiver_tensors)
+
       # exporting the model
       self._estimator.export_saved_model(
-          os.path.join(self._model_dir, 'saved_model'), input_fn
+          export_dir_base=os.path.join(self._model_dir, 'saved_model'), serving_input_receiver_fn=serving_input_receiver_function
       )
       logging.info("Exported best model")
 
