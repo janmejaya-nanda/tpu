@@ -185,65 +185,56 @@ class TpuExecutor(object):
       metrics = self._estimator.evaluate(
           input_fn, steps=eval_times, checkpoint_path=checkpoint_path)
     else:
-      # if not self._evaluator:
-      #   self.prepare_evaluation()
-      # if checkpoint_path:
-      #   current_step = int(os.path.basename(checkpoint_path).split('-')[1])
-      # else:
-      #   current_step = 0
-      # predictor = self._estimator.predict(
-      #     input_fn=input_fn,
-      #     checkpoint_path=checkpoint_path,
-      #     yield_single_examples=False)
-      # losses = collections.defaultdict(lambda: 0.0)
-      #
-      # counter = 0
-      # try:
-      #   while eval_times is None or counter < eval_times:
-      #     outputs = six.next(predictor)
-      #     predictions = {}
-      #     groundtruths = {}
-      #     for key, val in outputs.items():
-      #       if key[0:5] == 'pred_':
-      #         predictions[key[5::]] = val
-      #       if key[0:3] == 'gt_':
-      #         groundtruths[key[3::]] = val
-      #       if key[0:5] == 'loss_':
-      #         losses[key[5::]] += np.mean(val)
-      #     self._evaluator.update(
-      #         predictions,
-      #         groundtruths=(None if self._params.eval.use_json_file
-      #                       else groundtruths))
-      #     counter = counter + 1
-      #     tf.logging.info(
-      #         f'Finish eval step {counter} out of total {eval_times} steps.')
-      # except (tf.errors.OutOfRangeError, StopIteration):
-      #   logging.info(
-      #       'Evaluation reaches the end after running %d times.', counter)
-      #
-      # for key, val in outputs.items():
-      #   if key[0:5] == 'loss_':
-      #     losses[key[5::]] /= counter
-      # metrics = self._evaluator.evaluate()
-      #
-      # # Summary writer writes out eval metrics.
-      # output_dir = os.path.join(self._model_dir,
-      #                           'eval' + self._params.eval.suffix)
-      # tf.gfile.MakeDirs(output_dir)
-      # summary_writer = tf.summary.FileWriter(output_dir)
-      # write_summary(metrics, summary_writer, current_step)
-      # write_summary(losses, summary_writer, current_step)
-      # summary_writer.close()
+      if not self._evaluator:
+        self.prepare_evaluation()
+      if checkpoint_path:
+        current_step = int(os.path.basename(checkpoint_path).split('-')[1])
+      else:
+        current_step = 0
+      predictor = self._estimator.predict(
+          input_fn=input_fn,
+          checkpoint_path=checkpoint_path,
+          yield_single_examples=False)
+      losses = collections.defaultdict(lambda: 0.0)
 
-      def serving_input_receiver_function():
-          receiver_tensors = tf.placeholder(tf.float64, [None, 120, 120])
-          features = receiver_tensors
-          return tf.estimator.export.TensorServingInputReceiver(features, receiver_tensors)
+      counter = 0
+      try:
+        while eval_times is None or counter < eval_times:
+          outputs = six.next(predictor)
+          predictions = {}
+          groundtruths = {}
+          for key, val in outputs.items():
+            if key[0:5] == 'pred_':
+              predictions[key[5::]] = val
+            if key[0:3] == 'gt_':
+              groundtruths[key[3::]] = val
+            if key[0:5] == 'loss_':
+              losses[key[5::]] += np.mean(val)
+          self._evaluator.update(
+              predictions,
+              groundtruths=(None if self._params.eval.use_json_file
+                            else groundtruths))
+          counter = counter + 1
+          tf.logging.info(
+              f'Finish eval step {counter} out of total {eval_times} steps.')
+      except (tf.errors.OutOfRangeError, StopIteration):
+        logging.info(
+            'Evaluation reaches the end after running %d times.', counter)
 
-      # exporting the model
-      self._estimator.export_saved_model(
-          export_dir_base=os.path.join(self._model_dir, 'saved_model'), serving_input_receiver_fn=serving_input_receiver_function
-      )
+      for key, val in outputs.items():
+        if key[0:5] == 'loss_':
+          losses[key[5::]] /= counter
+      metrics = self._evaluator.evaluate()
+
+      # Summary writer writes out eval metrics.
+      output_dir = os.path.join(self._model_dir,
+                                'eval' + self._params.eval.suffix)
+      tf.gfile.MakeDirs(output_dir)
+      summary_writer = tf.summary.FileWriter(output_dir)
+      write_summary(metrics, summary_writer, current_step)
+      write_summary(losses, summary_writer, current_step)
+      summary_writer.close()
+
       logging.info("Exported best model")
 
     metrics = None

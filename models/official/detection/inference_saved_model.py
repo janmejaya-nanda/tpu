@@ -121,6 +121,7 @@ def main(unused_argv):
       image = Image.open(image_file)
       image = image.convert('RGB')  # needed for images with 4 channels.
       width, height = image.size
+      image = image.resize((width, height), Image.ANTIALIAS)
 
       np_image = (np.array(image.getdata())
                   .reshape(height, width, 3).astype(np.uint8))
