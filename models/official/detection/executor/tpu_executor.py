@@ -21,10 +21,12 @@ from __future__ import print_function
 
 import collections
 import os
+import glob
 
 from absl import logging
 import numpy as np
 import six
+from shutil import copyfile
 import tensorflow.compat.v1 as tf
 
 from evaluation import coco_utils
@@ -65,6 +67,9 @@ class TpuExecutor(object):
     self._evaluator = None
     self._tpu_cluster_resolver = tpu_cluster_resolver
     self._keep_checkpoint_max = keep_checkpoint_max
+
+    self._best_AP = 0
+    self._best_checkpoint_paths = []
 
     input_partition_dims = None
     num_cores_per_replica = None
@@ -235,11 +240,29 @@ class TpuExecutor(object):
       write_summary(losses, summary_writer, current_step)
       summary_writer.close()
 
-      logging.info("Exported best model")
+    logging.info("Exported best model")
+    if metrics['AP'] > self._best_AP:
+        self._best_AP = metrics['AP']
+        self._save_best_checkpoint(checkpoint_path=checkpoint_path)
 
-    metrics = None
     logging.info('Eval result: %s', metrics)
     return metrics
+
+  def _save_best_checkpoint(self, checkpoint_path):
+      dest_dir = os.path.join(self._model_dir, 'best_checkpoint')
+      os.makedirs(dest_dir, exist_ok=True)
+      for file in glob.glob(checkpoint_path + '.*'):
+          file_name = file.split('/')[-1]
+          copyfile(file, (dest_dir + '/' + file_name))
+
+      self._best_checkpoint_paths.append(checkpoint_path)
+
+      if self._keep_checkpoint_max > 1 and (len(self._best_checkpoint_paths) > self._keep_checkpoint_max):
+          # remove the old one
+          for file in glob.glob(self._best_checkpoint_paths[0] + '.*'):
+              if os.path.exists(file):
+                  os.remove(file)
+
 
   def predict(self, input_fn):
     return self._estimator.predict(input_fn=input_fn)

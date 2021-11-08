@@ -48,3 +48,10 @@ Werkzeug==2.0.1
 wget==3.2
 wrapt==1.12.1
 zipp==3.6.0
+
+torch==1.5
+torchvision==0.6
+-f https://download.pytorch.org/whl/cu101/torch_stable.html
+git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI
+detectron2
+-f https://dl.fbaipublicfiles.com/detectron2/wheels/cu101/index.html

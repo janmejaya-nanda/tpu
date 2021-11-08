@@ -27,6 +27,7 @@ from __future__ import print_function
 import base64
 import csv
 import io
+import json
 
 from absl import flags
 from absl import logging
@@ -62,7 +63,7 @@ flags.DEFINE_string(
     'image_file_pattern', '',
     'The glob that specifies the image file pattern.')
 flags.DEFINE_string(
-    'output_html', '/tmp/test.html',
+    'output_html', None,
     'The output HTML file that includes images with rendered detections.')
 flags.DEFINE_integer(
     'max_boxes_to_draw', 10, 'The maximum number of boxes to draw.')
@@ -70,6 +71,17 @@ flags.DEFINE_float(
     'min_score_threshold', 0.05,
     'The minimum score thresholds in order to draw boxes.')
 
+
+class NpEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        else:
+            return super(NpEncoder, self).default(obj)
 
 def main(unused_argv):
     del unused_argv
@@ -119,7 +131,7 @@ def main(unused_argv):
                                  ' node must be included in the SavedModel.')
             output_nodes['image_info'] = outputs['image_info'].name
 
-        image_with_detections_list = []
+        image_with_detections_list, results = [], []
         image_files = tf.gfile.Glob(FLAGS.image_file_pattern)
         for i, image_file in enumerate(image_files):
             print(' - processing image %d...' % i)
@@ -156,8 +168,13 @@ def main(unused_argv):
                 np_masks = mask_utils.paste_instance_masks(
                     np_masks, box_utils.yxyx_to_xywh(np_boxes), height, width)
 
-
-
+            for ind, category in enumerate(np_classes):
+                if np_scores[ind] > 0.75:
+                    results.append({
+                        "file_name": image_file.split('/')[-1],
+                        "bbox": list(np_boxes[ind]),
+                        "category": category
+                    })
             image_with_detections = (
                 visualization_utils.visualize_boxes_and_labels_on_image_array(
                     np_image,
@@ -171,29 +188,33 @@ def main(unused_argv):
                     min_score_thresh=FLAGS.min_score_threshold))
             image_with_detections_list.append(image_with_detections)
 
-            # Show images
-            Image.fromarray(image_with_detections.astype('uint8'), 'RGB').show()
-            import pdb
-            pdb.set_trace()
+            # # Show images
+            # Image.fromarray(image_with_detections.astype('uint8'), 'RGB').show()
+            # import pdb
+            # pdb.set_trace()
 
     print(' - Saving the outputs...')
-    formatted_image_with_detections_list = [
-        Image.fromarray(image.astype(np.uint8))
-        for image in image_with_detections_list]
-    html_str = '<html>'
-    image_strs = []
-    for formatted_image in formatted_image_with_detections_list:
-        with io.BytesIO() as stream:
-            formatted_image.save(stream, format='JPEG')
-            data_uri = base64.b64encode(stream.getvalue()).decode('utf-8')
-        image_strs.append(
-            '<img src="data:image/jpeg;base64,{}", height=800>'
-                .format(data_uri))
-    images_str = ' '.join(image_strs)
-    html_str += images_str
-    html_str += '</html>'
-    with tf.gfile.GFile(FLAGS.output_html, 'w') as f:
-        f.write(html_str)
+    with open("/home/user/impact/experiments_repo/fashionpedia/result.json", 'w') as f:
+        json.dump(results, f, cls=NpEncoder)
+
+    if FLAGS.output_html:
+        formatted_image_with_detections_list = [
+            Image.fromarray(image.astype(np.uint8))
+            for image in image_with_detections_list]
+        html_str = '<html>'
+        image_strs = []
+        for formatted_image in formatted_image_with_detections_list:
+            with io.BytesIO() as stream:
+                formatted_image.save(stream, format='JPEG')
+                data_uri = base64.b64encode(stream.getvalue()).decode('utf-8')
+            image_strs.append(
+                '<img src="data:image/jpeg;base64,{}", height=800>'
+                    .format(data_uri))
+        images_str = ' '.join(image_strs)
+        html_str += images_str
+        html_str += '</html>'
+        with tf.gfile.GFile(FLAGS.output_html, 'w') as f:
+            f.write(html_str)
 
 
 if __name__ == '__main__':
