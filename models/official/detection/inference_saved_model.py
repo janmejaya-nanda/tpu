@@ -68,7 +68,7 @@ flags.DEFINE_string(
 flags.DEFINE_integer(
     'max_boxes_to_draw', 10, 'The maximum number of boxes to draw.')
 flags.DEFINE_float(
-    'min_score_threshold', 0.05,
+    'min_score_threshold', 0.85,
     'The minimum score thresholds in order to draw boxes.')
 
 
@@ -169,7 +169,7 @@ def main(unused_argv):
                     np_masks, box_utils.yxyx_to_xywh(np_boxes), height, width)
 
             for ind, category in enumerate(np_classes):
-                if np_scores[ind] > 0.75:
+                if np_scores[ind] > FLAGS.min_score_threshold:
                     results.append({
                         "file_name": image_file.split('/')[-1],
                         "bbox": list(np_boxes[ind]),
@@ -194,9 +194,6 @@ def main(unused_argv):
             # pdb.set_trace()
 
     print(' - Saving the outputs...')
-    with open("/home/user/impact/experiments_repo/fashionpedia/result.json", 'w') as f:
-        json.dump(results, f, cls=NpEncoder)
-
     if FLAGS.output_html:
         formatted_image_with_detections_list = [
             Image.fromarray(image.astype(np.uint8))
