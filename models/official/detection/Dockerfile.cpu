@@ -1,0 +1,37 @@
+# Source: tensorflow/serving docker tool
+# https://github.com/tensorflow/serving/tree/master/tensorflow_serving/tools/docker
+
+ARG TF_VERSION=1.15.2-py3
+ARG TF_SERVING_BUILD_IMAGE=tensorflow/tensorflow:${TF_VERSION}
+
+FROM ${TF_SERVING_BUILD_IMAGE} as build_image
+
+# API HOST and PORT
+ENV SERVER_HOST=0.0.0.0
+ENV SERVER_PORT=8000
+
+# API
+EXPOSE ${SERVER_PORT}
+
+# Set where models should be stored in the container
+ENV MODEL_BASE_PATH=/models
+RUN mkdir -p ${MODEL_BASE_PATH}
+
+# The only required piece is the model name in order to differentiate endpoints
+ENV MODEL_NAME=fashionpedia-tf
+
+RUN ls ${MODEL_BASE_PATH}
+COPY ./ tpu-detection/
+WORKDIR tpu-detection/
+
+# Add few python paths
+ENV PYTHONPATH "/tpu-detection/models/official:/tpu-detection/efficientnet:${PYTHONPATH}"
+
+# TODO: this is to run docker from local. for cloud save model to bucket and download from there
+#COPY 'fashionpedia-r50-fpn/' '${MODEL_BASE_PATH}/fashionpedia-r50-fpn/'
+ENV CHECKPOINT_PATH='/tpu-detection/fashionpedia-r50-fpn/model.ckpt'
+ENV IMAGE_FILES_PATH='/tpu-detection/test_images/'
+
+RUN pip install -r requirements-cpu.txt
+
+ENTRYPOINT ["python3", "run_server.py"]
